@@ -1,3 +1,5 @@
+# Code coming soon ...
+
 # Weighted Linde-Buzo-Gray Stippling
 
 An interactive demo application for the algorithm proposed in our SIGGRAPH Asia 2017 technical paper.
