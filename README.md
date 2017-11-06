@@ -1,5 +1,3 @@
-# Code coming soon ...
-
 # Weighted Linde-Buzo-Gray Stippling
 
 An interactive demo application for the algorithm proposed in our SIGGRAPH Asia 2017 technical paper.
@@ -39,3 +37,12 @@ The following libraries are required:
 * Qt5Core
 * Qt5Widgets
 * Qt5Svg
+
+### Building
+```bash
+mkdir build
+cd build
+cmake ..
+make
+./LBGStippling
+```
