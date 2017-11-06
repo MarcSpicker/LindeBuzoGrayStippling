@@ -1,5 +1,8 @@
 # Weighted Linde-Buzo-Gray Stippling
 
+## Code coming soon ...
+The code will be added to this site closer to SIGGRAPH Asia 2017 (starting November 27)!
+
 An interactive demo application for the algorithm proposed in our SIGGRAPH Asia 2017 technical paper.
 Our project website (paper, video, examples) can be found [here](http://graphics.uni-konstanz.de/publikationen/Deussen2017LindeBuzoGray/index.html).
 
