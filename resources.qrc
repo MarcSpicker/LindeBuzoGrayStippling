@@ -1,0 +1,10 @@
+<!DOCTYPE RCC><RCC version="1.0">
+	<qresource>
+        <file>shader/Voronoi.vert</file>
+        <file>shader/Voronoi.frag</file>
+        <file>input/input1.jpg</file>
+        <file>input/input2.jpg</file>
+        <file>input/input3.jpg</file>
+        <file>input/input4.jpg</file>
+	</qresource>
+</RCC>
