@@ -3,7 +3,7 @@
 An interactive demo application for the algorithm proposed in our SIGGRAPH Asia 2017 technical paper.
 Our project website (paper, video, examples) can be found [here](http://graphics.uni-konstanz.de/publikationen/Deussen2017LindeBuzoGray/index.html).
 
-<img src="https://github.com/MarcSpicker/LindeBuzoGrayStippling/Bridge.gif" alt="Example animation of our algorithm." width="500px" height="375px">
+<img src="https://github.com/MarcSpicker/blob/master/LindeBuzoGrayStippling/Bridge.gif?raw=true" alt="Example animation of our algorithm." width="500px" height="375px">
 
 ### Disclaimer
 This is a reimplemented demo with focus on interactivity, and not the code that was used to generate the images and timings in the paper.
