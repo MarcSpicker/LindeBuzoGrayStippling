@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QtWidgets>
 
+#include "lbgstippling.h"
+
 class StippleViewer;
 class LBGStippling;
 
@@ -12,7 +14,7 @@ class SettingsWidget : public QWidget {
   Q_OBJECT
 
 public:
-  explicit SettingsWidget(const LBGStippling *lbgStippling,
+  explicit SettingsWidget(LBGStippling *lbgStippling,
                           const StippleViewer *stippleViewer,
                           QWidget *parent = nullptr);
 
@@ -37,7 +39,8 @@ private slots:
   void openInputFileCall();
 
 private:
-  const LBGStippling *m_LBGStippling;
+  StipplingParams m_params;
+  LBGStippling *m_LBGStippling;
   const StippleViewer *m_stippleViewer;
 
   QPushButton *m_savePNG;

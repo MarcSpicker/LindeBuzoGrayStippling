@@ -32,6 +32,22 @@ private:
   std::uniform_real_distribution<double> *dis;
 };
 
+struct StipplingParams {
+  int initialPoints = 1;
+  double initialPointSize = 4.0;
+
+  bool adaptivePointSize = true;
+  double pointSizeMin = 2.0;
+  double pointSizeMax = 4.0;
+
+  int superSamplingFactor = 1;
+  int maxIterations = 50;
+
+  double hysteresis = 0.6f;
+  bool adaptiveHysteresis = true;
+  double adaptiveHysteresisDelta = hysteresis / (maxIterations - 1);
+};
+
 class LBGStippling : public QObject {
 
   Q_OBJECT
@@ -57,34 +73,13 @@ signals:
 
 public slots:
   void nextIteration(const QVector<VoronoiCell> &cells);
-  void start();
-
-  void setInitalPoints(const int numPoints);
-  void setInitialPointSize(const double pointSize);
-  void setAdaptivePointSize(const bool enable);
-  void setMinimalPointSize(const double minSize);
-  void setMaximalPointSize(const double maxSize);
-  void setSuperSampling(const int factor);
-  void setMaxIterations(const int n);
-  void setHysteresis(const double hysteresis);
-  void setAdaptiveHysteresis(const bool enable);
+  void start(const StipplingParams &params);
 
   void inputImageChanged(const QString &path);
 
 private:
-  // algorithm parameters
-  uint m_initialPoints;
-  double m_initialPointSize;
+  StipplingParams m_params;
 
-  bool m_adaptivePointSize;
-  double m_pointSizeMin;
-  double m_pointSizeMax;
-
-  uint m_superSamplingFactor;
-  uint m_maxIterations;
-
-  double m_hysteresis;
-  bool m_adaptiveHysteresis;
   double m_adaptiveHysteresisDelta;
 
   // internals
@@ -92,7 +87,7 @@ private:
   int m_height;
   QImage m_density;
 
-  uint m_iteration;
+  int m_iteration;
   QVector<QVector2D> m_points;
   QVector<float> m_sizes;
   QVector<QColor> m_colors;

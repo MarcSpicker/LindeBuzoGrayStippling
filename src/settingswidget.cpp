@@ -1,12 +1,12 @@
 #include "settingswidget.h"
-#include "lbgstippling.h"
 #include "stippleviewer.h"
 
-SettingsWidget::SettingsWidget(const LBGStippling *lbgStippling,
+SettingsWidget::SettingsWidget(LBGStippling *lbgStippling,
                                const StippleViewer *stippleViewer,
                                QWidget *parent)
-    : QWidget(parent), m_LBGStippling(lbgStippling),
+    : QWidget(parent), m_params(), m_LBGStippling(lbgStippling),
       m_stippleViewer(stippleViewer) {
+
   QVBoxLayout *layout = new QVBoxLayout(this);
   setLayout(layout);
   setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
@@ -16,57 +16,58 @@ SettingsWidget::SettingsWidget(const LBGStippling *lbgStippling,
 
   QLabel *initialPointLabel = new QLabel("Initial points:", this);
   QSpinBox *spinInitialPoints = new QSpinBox(this);
-  spinInitialPoints->setValue(1);
   spinInitialPoints->setRange(1, 10000);
+  spinInitialPoints->setValue(m_params.initialPoints);
   spinInitialPoints->setToolTip(
       "The number of points the algorithm starts with, must be at least one.");
-  connect(spinInitialPoints, SIGNAL(valueChanged(int)), m_LBGStippling,
-          SLOT(setInitalPoints(int)));
+  connect(spinInitialPoints, QOverload<int>::of(&QSpinBox::valueChanged),
+          [&](int value) { m_params.initialPoints = value; });
 
   QLabel *initialPointSizeLabel = new QLabel("Point Size:", this);
   QDoubleSpinBox *spinInitialPointSize = new QDoubleSpinBox(this);
-  spinInitialPointSize->setValue(4.0f);
   spinInitialPointSize->setRange(1.0f, 20.0f);
+  spinInitialPointSize->setValue(m_params.initialPointSize);
   spinInitialPointSize->setSingleStep(0.1f);
   spinInitialPointSize->setToolTip("The point size used by the algorithm. This "
                                    "will only be used when adaptive point size "
                                    "is off.");
-  connect(spinInitialPointSize, SIGNAL(valueChanged(double)), m_LBGStippling,
-          SLOT(setInitialPointSize(double)));
+  connect(spinInitialPointSize,
+          QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+          [&](double value) { m_params.initialPointSize = value; });
 
   QCheckBox *adaptivePointSize =
       new QCheckBox("Use adaptive point size.", this);
-  adaptivePointSize->setChecked(true);
+  adaptivePointSize->setChecked(m_params.adaptivePointSize);
   adaptivePointSize->setToolTip("If enabled the algorithm will automatically "
                                 "determine the point size in the given minimum "
                                 "and maximum range.");
-  connect(adaptivePointSize, SIGNAL(clicked(bool)), m_LBGStippling,
-          SLOT(setAdaptivePointSize(bool)));
+  connect(adaptivePointSize, &QCheckBox::clicked,
+          [&](bool value) { m_params.adaptivePointSize = value; });
 
   QLabel *minPointSize = new QLabel("Minimal Point Size:", this);
   QDoubleSpinBox *spinMinPointSize = new QDoubleSpinBox(this);
-  spinMinPointSize->setValue(2.0f);
   spinMinPointSize->setRange(1.0f, 10.0f);
+  spinMinPointSize->setValue(m_params.pointSizeMin);
   spinMinPointSize->setSingleStep(0.1f);
   spinMinPointSize->setToolTip(
       "The minimum point size used when adaptive point size is enabled.");
-  connect(spinMinPointSize, SIGNAL(valueChanged(double)), m_LBGStippling,
-          SLOT(setMinimalPointSize(double)));
+  connect(spinMinPointSize,
+          QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+          [&](double value) { m_params.pointSizeMin = value; });
 
   QLabel *maxPointSize = new QLabel("Maximal Point Size:", this);
   QDoubleSpinBox *spinMaxPointSize = new QDoubleSpinBox(this);
-  spinMaxPointSize->setValue(4.0f);
   spinMaxPointSize->setRange(1.0f, 10.0f);
+  spinMaxPointSize->setValue(m_params.pointSizeMax);
   spinMaxPointSize->setSingleStep(0.1f);
   spinMaxPointSize->setToolTip(
       "The maximum point size used when adaptive point size is enabled.");
-  connect(spinMaxPointSize, SIGNAL(valueChanged(double)), m_LBGStippling,
-          SLOT(setMaximalPointSize(double)));
+  connect(spinMaxPointSize,
+          QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+          [&](double value) { m_params.pointSizeMax = value; });
 
   QGridLayout *pointGroupLayout = new QGridLayout(pointGroup);
   pointGroup->setLayout(pointGroupLayout);
-  pointGroupLayout->addWidget(initialPointLabel);
-  pointGroupLayout->addWidget(spinInitialPoints);
   pointGroupLayout->addWidget(initialPointLabel, 0, 0);
   pointGroupLayout->addWidget(spinInitialPoints, 0, 1);
   pointGroupLayout->addWidget(initialPointSizeLabel, 1, 0);
@@ -84,43 +85,43 @@ SettingsWidget::SettingsWidget(const LBGStippling *lbgStippling,
 
   QLabel *hysteresisLabel = new QLabel("Hysteresis:", this);
   QDoubleSpinBox *spinHysterresis = new QDoubleSpinBox(this);
-  spinHysterresis->setValue(0.6f);
   spinHysterresis->setRange(0.1f, 3.0f);
+  spinHysterresis->setValue(m_params.hysteresis);
   spinHysterresis->setSingleStep(0.1f);
   spinHysterresis->setToolTip("How close to 'perfect' the cell size has to be "
                               "in order not to be split:\n Lower values mean "
                               "slower convergence but higher quality results "
                               "and vice versa.");
-  connect(spinHysterresis, SIGNAL(valueChanged(double)), m_LBGStippling,
-          SLOT(setHysteresis(double)));
+  connect(spinHysterresis, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+          [&](double value) { m_params.hysteresis = value; });
 
   QCheckBox *adaptiveHysteresis =
       new QCheckBox("Use adaptive hysteresis.", this);
-  adaptiveHysteresis->setChecked(true);
+  adaptiveHysteresis->setChecked(m_params.adaptiveHysteresis);
   adaptiveHysteresis->setToolTip(
       "If enabled, the hysteresis will increase over time (linearly up to "
       "twice the hysteresis over the maximum number of iterations.");
-  connect(adaptiveHysteresis, SIGNAL(clicked(bool)), m_LBGStippling,
-          SLOT(setAdaptiveHysteresis(bool)));
+  connect(adaptiveHysteresis, &QCheckBox::clicked,
+          [&](bool value) { m_params.adaptiveHysteresis = value; });
 
   QLabel *maxIterLabel = new QLabel("Maximum Iterations:", this);
   QSpinBox *spinMaxIter = new QSpinBox(this);
-  spinMaxIter->setValue(50);
   spinMaxIter->setRange(1, 1000);
+  spinMaxIter->setValue(m_params.maxIterations);
   spinMaxIter->setToolTip("The maximum number of iterations until the "
                           "algorithm stops (may stop before if no further "
                           "changes).");
-  connect(spinMaxIter, SIGNAL(valueChanged(int)), m_LBGStippling,
-          SLOT(setMaxIterations(int)));
+  connect(spinMaxIter, QOverload<int>::of(&QSpinBox::valueChanged),
+          [&](int value) { m_params.maxIterations = value; });
 
   QLabel *superSampleLabel = new QLabel("Super-Sampling Factor:", this);
   QSpinBox *spinSuperSample = new QSpinBox(this);
-  spinSuperSample->setValue(1);
   spinSuperSample->setRange(1, 2);
+  spinSuperSample->setValue(m_params.superSamplingFactor);
   spinSuperSample->setToolTip("Increases the size and percision of the Voronoi "
                               "diagram, but makes the calculation slower.");
-  connect(spinSuperSample, SIGNAL(valueChanged(int)), m_LBGStippling,
-          SLOT(setSuperSampling(int)));
+  connect(spinSuperSample, QOverload<int>::of(&QSpinBox::valueChanged),
+          [&](int value) { m_params.superSamplingFactor = value; });
 
   QGridLayout *algoGroupLayout = new QGridLayout(algoGroup);
   algoGroup->setLayout(algoGroupLayout);
@@ -170,7 +171,8 @@ SettingsWidget::SettingsWidget(const LBGStippling *lbgStippling,
   QVBoxLayout *startLayout = new QVBoxLayout(startGroup);
 
   m_startButton = new QPushButton("Start", this);
-  connect(m_startButton, SIGNAL(released()), m_LBGStippling, SLOT(start()));
+  connect(m_startButton, &QPushButton::released, m_LBGStippling,
+          [&]() { m_LBGStippling->start(m_params); });
   connect(m_startButton, SIGNAL(released()), this, SLOT(disableStartButton()));
   connect(m_startButton, SIGNAL(released()), this, SLOT(disableSaveButtons()));
   connect(m_LBGStippling, SIGNAL(finished()), this, SLOT(enableStartButton()));
