@@ -1,6 +1,8 @@
 #ifndef LBGSTIPPLING_H
 #define LBGSTIPPLING_H
 
+#include "voronoidiagram.h"
+
 #include <random>
 
 #include <QImage>
@@ -8,91 +10,52 @@
 #include <QVector2D>
 #include <QVector>
 
-class VoronoiCell;
-class VoronoiDiagram;
-
-class Random {
-public:
-  Random(double low, double high) {
-    rd = new std::random_device;
-    gen = new std::mt19937((*rd)());
-    dis = new std::uniform_real_distribution<double>(low, high);
-  }
-  ~Random() {
-    delete dis;
-    delete gen;
-    delete rd;
-  }
-
-  double next() const { return (*dis)(*gen); }
-
-private:
-  std::random_device *rd;
-  std::mt19937 *gen;
-  std::uniform_real_distribution<double> *dis;
+// TODO: Color is only used for debugging
+struct Stipple {
+    QVector2D pos;
+    float size;
+    QColor color;
 };
 
-struct StipplingParams {
-  int initialPoints = 1;
-  double initialPointSize = 4.0;
+class LBGStippling {
 
-  bool adaptivePointSize = true;
-  double pointSizeMin = 2.0;
-  double pointSizeMax = 4.0;
+  public:
+    struct Params {
+        int initialPoints = 1;
+        float initialPointSize = 4.0;
 
-  int superSamplingFactor = 1;
-  int maxIterations = 50;
+        bool adaptivePointSize = true;
+        float pointSizeMin = 2.0;
+        float pointSizeMax = 4.0;
 
-  double hysteresis = 0.6f;
-  bool adaptiveHysteresis = true;
-  double adaptiveHysteresisDelta = hysteresis / (maxIterations - 1);
-};
+        size_t superSamplingFactor = 1;
+        size_t maxIterations = 50;
 
-class LBGStippling : public QObject {
+        float hysteresis = 0.6f;
+        bool adaptiveHysteresis = true;
+    };
 
-  Q_OBJECT
+    struct Status {
+        size_t iteration;
+        size_t size;
+        size_t splits;
+        size_t merges;
+    };
 
-public:
-  LBGStippling();
-  ~LBGStippling();
-  void init(const int w, const int h, const QImage &density);
+    template <class T>
+    using Report = std::function<void(const T&)>;
 
-private:
-  float getSplitValue_Upper(const float pointDiameter, const float hysteresis);
-  float getSplitValue_Lower(const float pointDiameter, const float hysteresis);
+    LBGStippling();
 
-signals:
-  void displayPoints(const QVector<QVector2D> &points,
-                     const QVector<float> &sizes,
-                     const QVector<QColor> &colors);
-  void saveImagePNG(const QString &path);
-  void saveImageSVG(const QString &path);
-  void displayStatusMessage(const int iteration, const int numberPoints,
-                            const int splits, const int merges);
-  void finished();
+    std::vector<Stipple> stipple(const QImage& density, const Params& params) const;
 
-public slots:
-  void nextIteration(const QVector<VoronoiCell> &cells);
-  void start(const StipplingParams &params);
+    // TODO: Rename and method chaining.
+    void setStatusCallback(Report<Status> statusCB);
+    void setStippleCallback(Report<std::vector<Stipple>> stippleCB);
 
-  void inputImageChanged(const QString &path);
-
-private:
-  StipplingParams m_params;
-
-  double m_adaptiveHysteresisDelta;
-
-  // internals
-  int m_width;
-  int m_height;
-  QImage m_density;
-
-  int m_iteration;
-  QVector<QVector2D> m_points;
-  QVector<float> m_sizes;
-  QVector<QColor> m_colors;
-
-  VoronoiDiagram *m_voro;
+  private:
+    Report<Status> m_statusCallback;
+    Report<std::vector<Stipple>> m_stippleCallback;
 };
 
 #endif // LBGSTIPPLING_H

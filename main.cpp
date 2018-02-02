@@ -13,16 +13,13 @@
 #include <QApplication>
 
 #include "mainwindow.h"
-#include "voronoidiagram.h"
 
-int main(int argc, char *argv[]) {
-  QApplication app(argc, argv);
-  app.setApplicationName("Weighted Linde-Buzo-Gray Stippling");
+int main(int argc, char* argv[]) {
+    QApplication app(argc, argv);
+    app.setApplicationName("Weighted Linde-Buzo-Gray Stippling");
 
-  qRegisterMetaType<QVector<VoronoiCell>>("QVector<VoronoiCell>");
+    MainWindow window;
+    window.show();
 
-  MainWindow window;
-  window.show();
-
-  return app.exec();
+    return app.exec();
 }

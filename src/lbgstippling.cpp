@@ -1,179 +1,168 @@
 #include "lbgstippling.h"
-#include "voronoidiagram.h"
+#include "voronoicell.h"
 
-#include <iostream>
+#include <cassert>
 
 #include <QtMath>
 
-// random jitter for split points
-static Random jitterRandom(-0.001, 0.001);
+namespace Random {
+std::random_device rd;
+std::mt19937 gen(rd());
+} // namespace Random
+
+using Params = LBGStippling::Params;
+using Status = LBGStippling::Status;
+
+QVector<QVector2D> sites(const std::vector<Stipple>& stipples) {
+    QVector<QVector2D> sites(stipples.size());
+    std::transform(stipples.begin(), stipples.end(), sites.begin(),
+                   [](const auto& s) { return s.pos; });
+    return sites;
+}
+
+std::vector<Stipple> randomStipples(size_t n, float size) {
+    std::uniform_real_distribution<float> dis(0.01f, 0.99f);
+    std::vector<Stipple> stipples(n);
+    std::generate(stipples.begin(), stipples.end(), [&]() {
+        return Stipple{QVector2D(dis(Random::gen), dis(Random::gen)), size, Qt::black};
+    });
+    return stipples;
+}
+
+template <class T>
+inline T pow2(T x) {
+    return x * x;
+}
+
+QVector2D jitter(QVector2D s) {
+    using namespace Random;
+    std::uniform_real_distribution<float> jitter_dis(-0.001f, 0.001f);
+    return s += QVector2D(jitter_dis(gen), jitter_dis(gen));
+}
+
+float getSplitValueUpper(float pointDiameter, float hysteresis, size_t superSampling) {
+    const float pointArea = M_PI * pow2(pointDiameter / 2.0f);
+    return (1.0f + hysteresis / 2.0f) * pointArea * pow2(superSampling);
+}
+
+float getSplitValueLower(float pointDiameter, float hysteresis, size_t superSampling) {
+    const float pointArea = M_PI * pow2(pointDiameter / 2.0f);
+    return (1.0f - hysteresis / 2.0f) * pointArea * pow2(superSampling);
+}
+
+float stippleSize(const VoronoiCell& cell, const Params& params) {
+    if (params.adaptivePointSize) {
+        float avgIntensitySqrt = std::sqrt(cell.sumDensity / cell.area);
+        return params.pointSizeMin * (1.0f - avgIntensitySqrt) +
+               params.pointSizeMax * avgIntensitySqrt;
+    } else {
+        return params.initialPointSize;
+    }
+}
+
+float currentHysteresis(size_t i, const Params& params) {
+    if (params.adaptiveHysteresis) {
+        float delta = params.hysteresis / (params.maxIterations - 1);
+        return params.hysteresis + i * delta;
+    } else {
+        return params.hysteresis;
+    }
+}
+
+bool notFinished(const Status& status, const Params& params) {
+    auto[iteration, size, splits, merges] = status;
+    return !((splits == 0 && merges == 0) || (iteration == params.maxIterations));
+}
 
 LBGStippling::LBGStippling() {
-  m_voro = new VoronoiDiagram();
-  connect(m_voro, &VoronoiDiagram::passResult, this,
-          &LBGStippling::nextIteration);
+    m_statusCallback = [](const Status&) {};
+    m_stippleCallback = [](const std::vector<Stipple>&) {};
 }
 
-LBGStippling::~LBGStippling() { delete m_voro; }
-
-void LBGStippling::init(const int w, const int h, const QImage &density) {
-  m_width = w;
-  m_height = h;
-  m_density = density;
-  m_iteration = 0;
+void LBGStippling::setStatusCallback(Report<Status> statusCB) {
+    m_statusCallback = statusCB;
 }
 
-float LBGStippling::getSplitValue_Upper(const float pointDiameter,
-                                        const float hysteresis) {
-  const float pointArea = M_PI * (pointDiameter * pointDiameter / 4.0f);
-  return (1.0f + hysteresis / 2.0f) * pointArea * m_params.superSamplingFactor *
-         m_params.superSamplingFactor;
+void LBGStippling::setStippleCallback(Report<std::vector<Stipple>> stippleCB) {
+    m_stippleCallback = stippleCB;
 }
 
-float LBGStippling::getSplitValue_Lower(const float pointDiameter,
-                                        const float hysteresis) {
-  const float pointArea = M_PI * (pointDiameter * pointDiameter / 4.0f);
-  return (1.0f - hysteresis / 2.0f) * pointArea * m_params.superSamplingFactor *
-         m_params.superSamplingFactor;
-}
+std::vector<Stipple> LBGStippling::stipple(const QImage& density, const Params& params) const {
+    QImage densityGray =
+        density
+            .scaledToWidth(params.superSamplingFactor * density.width(), Qt::SmoothTransformation)
+            .convertToFormat(QImage::Format_Grayscale8);
 
-void LBGStippling::start(const StipplingParams &params) {
-  m_params = params;
-  m_voro->init(m_width, m_height, m_density, m_params.superSamplingFactor);
-  m_adaptiveHysteresisDelta = params.hysteresis / (params.maxIterations - 1);
+    VoronoiDiagram voronoi(densityGray);
 
-  m_points.clear();
-  m_sizes.clear();
-  m_colors.clear();
+    std::vector<Stipple> stipples = randomStipples(params.initialPoints, params.initialPointSize);
 
-  m_iteration = 0;
+    Status status = {0, 0, 1, 1};
 
-  Random rnd(0.01, 0.99);
-  for (int i = 0; i < m_params.initialPoints; ++i) {
-    float x = rnd.next();
-    float y = rnd.next();
-    m_points.push_back(QVector2D(x, y));
-    m_sizes.push_back(m_params.initialPointSize);
-    m_colors.push_back(Qt::black);
-  }
+    while (notFinished(status, params)) {
+        status.splits = 0;
+        status.merges = 0;
+        auto indexMap = voronoi.calculate(sites(stipples));
+        std::vector<VoronoiCell> cells = accumulateCells(indexMap, densityGray);
 
-  emit displayPoints(m_points, m_sizes, m_colors);
-  emit displayStatusMessage(m_iteration + 1, m_points.size(), 0, 0);
+        assert(cells.size() == stipples.size());
 
-  m_voro->calculate(m_points);
-}
+        stipples.clear();
 
-void LBGStippling::nextIteration(const QVector<VoronoiCell> &cells) {
-  if (cells.size() != m_points.size()) {
-    std::cerr << "Number of Voronoi cells and points mismatch!" << std::endl;
-    return;
-  }
+        float hysteresis = currentHysteresis(status.iteration, params);
 
-  // data from voronoi cells for relaxation (and optional point sizes)
-  for (int i = 0; i < cells.size(); ++i) {
-    const VoronoiCell &vc = cells[i];
-    if (!vc.valid)
-      continue;
+        for (const auto& cell : cells) {
+            float totalDensity = cell.sumDensity;
+            float diameter = stippleSize(cell, params);
 
-    m_points[i] = vc.centroid;
+            if (totalDensity <
+                    getSplitValueLower(diameter, hysteresis, params.superSamplingFactor) ||
+                cell.area == 0.0f) {
+                // cell too small - merge
+                ++status.merges;
+                continue;
+            }
 
-    if (m_params.adaptivePointSize) {
-      // point size based on average intensity
-      float avgIntensitySqrt = std::sqrt(vc.moment00 / vc.area);
-      m_sizes[i] = m_params.pointSizeMin * (1.0f - avgIntensitySqrt) +
-                   m_params.pointSizeMax * avgIntensitySqrt;
+            if (totalDensity <
+                getSplitValueUpper(diameter, hysteresis, params.superSamplingFactor)) {
+                // cell size within acceptable range - keep
+                stipples.push_back({cell.centroid, diameter, Qt::black});
+                continue;
+            }
+
+            // cell too large - split
+            float area = std::max(1.0f, cell.area);
+            float circleRadius = std::sqrt(area / M_PI);
+            QVector2D splitVector = QVector2D(0.5f * circleRadius, 0.0f);
+
+            float a = cell.orientation;
+            QVector2D splitVectorRotated =
+                QVector2D(splitVector.x() * std::cos(a) - splitVector.y() * std::sin(a),
+                          splitVector.y() * std::cos(a) + splitVector.x() * std::sin(a));
+
+            splitVectorRotated.setX(splitVectorRotated.x() / densityGray.width());
+            splitVectorRotated.setY(splitVectorRotated.y() / densityGray.height());
+
+            QVector2D splitSeed1 = cell.centroid - splitVectorRotated;
+            QVector2D splitSeed2 = cell.centroid + splitVectorRotated;
+
+            // check boundaries
+            splitSeed1.setX(std::max(0.0f, std::min(splitSeed1.x(), 1.0f)));
+            splitSeed1.setY(std::max(0.0f, std::min(splitSeed1.y(), 1.0f)));
+
+            splitSeed2.setX(std::max(0.0f, std::min(splitSeed2.x(), 1.0f)));
+            splitSeed2.setY(std::max(0.0f, std::min(splitSeed2.y(), 1.0f)));
+
+            stipples.push_back({jitter(splitSeed1), diameter, Qt::red});
+            stipples.push_back({jitter(splitSeed2), diameter, Qt::red});
+
+            ++status.splits;
+        }
+        status.size = stipples.size();
+        m_stippleCallback(stipples);
+        m_statusCallback(status);
+
+        ++status.iteration;
     }
-  }
-
-  uint doneSplits = 0;
-  uint doneMerges = 0;
-  uint doneRetains = 0;
-
-  QVector<QVector2D> lastPoints(m_points);
-  QVector<float> lastSizes(m_sizes);
-
-  m_points.clear();
-  m_sizes.clear();
-  m_colors.clear();
-
-  float curHysteresis = m_params.hysteresis;
-  if (m_params.adaptiveHysteresis)
-    curHysteresis += m_iteration * m_adaptiveHysteresisDelta;
-
-  for (int i = 0; i < lastPoints.size(); ++i) {
-    const VoronoiCell &vc = cells[i];
-    float totalDensity = vc.moment00;
-
-    QVector2D &curPoint = lastPoints[i];
-    float &curSize = lastSizes[i];
-
-    if (totalDensity < getSplitValue_Lower(curSize, curHysteresis)) {
-      // cell too small - merge
-      ++doneMerges;
-      continue;
-    }
-
-    if (totalDensity < getSplitValue_Upper(curSize, curHysteresis)) {
-      // cell size within acceptable range - keep
-      m_points.push_back(curPoint);
-      m_sizes.push_back(curSize);
-      m_colors.push_back(Qt::black);
-      ++doneRetains;
-      continue;
-    }
-
-    // cell too large - split
-    float area = std::max(1.0f, vc.area);
-    float circleRadius = std::sqrt(area / M_PI);
-    QVector2D splitVector = QVector2D(0.5f * circleRadius, 0.0f);
-
-    float a = vc.orientation;
-    QVector2D splitVectorRotated = QVector2D(
-        splitVector.x() * std::cos(a) - splitVector.y() * std::sin(a),
-        splitVector.y() * std::cos(a) + splitVector.x() * std::sin(a));
-
-    splitVectorRotated.setX(splitVectorRotated.x() / m_width);
-    splitVectorRotated.setY(splitVectorRotated.y() / m_height);
-
-    QVector2D splitSeed1 = curPoint - splitVectorRotated;
-    QVector2D splitSeed2 = curPoint + splitVectorRotated;
-
-    // check boundaries
-    splitSeed1.setX(std::max(0.0f, std::min(splitSeed1.x(), 1.0f)));
-    splitSeed1.setY(std::max(0.0f, std::min(splitSeed1.y(), 1.0f)));
-
-    splitSeed2.setX(std::max(0.0f, std::min(splitSeed2.x(), 1.0f)));
-    splitSeed2.setY(std::max(0.0f, std::min(splitSeed2.y(), 1.0f)));
-
-    m_points.push_back(splitSeed1 +
-                       QVector2D(jitterRandom.next(), jitterRandom.next()));
-    m_sizes.push_back(curSize);
-    m_colors.push_back(Qt::red);
-
-    m_points.push_back(splitSeed2 +
-                       QVector2D(jitterRandom.next(), jitterRandom.next()));
-    m_sizes.push_back(curSize);
-    m_colors.push_back(Qt::red);
-
-    ++doneSplits;
-  }
-
-  emit displayPoints(m_points, m_sizes, m_colors);
-  emit displayStatusMessage(m_iteration + 1, m_points.size(), doneSplits,
-                            doneMerges);
-
-  // no more changes or maximum iterations reached - finished
-  if ((doneSplits == 0 && doneMerges == 0) ||
-      (++m_iteration >= m_params.maxIterations)) {
-    emit finished();
-    return;
-  }
-
-  // trigger next iteration
-  m_voro->calculate(m_points);
-}
-
-void LBGStippling::inputImageChanged(const QString &path) {
-  QImage img(path);
-  init(img.width(), img.height(), img);
+    return stipples;
 }

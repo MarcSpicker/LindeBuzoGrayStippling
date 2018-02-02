@@ -1,163 +1,218 @@
 #include "voronoidiagram.h"
-#include "voronoithread.h"
 
+#include <cassert>
 #include <cmath>
-#include <iostream>
 
+#include <QOpenGLBuffer>
 #include <QOpenGLFramebufferObjectFormat>
-#include <QtMath>
+#include <QOpenGLFunctions_3_3_Core>
 
-VoronoiDiagram::VoronoiDiagram() : m_initialized(false), m_running(false) {
-  m_context = new QOpenGLContext();
-  QSurfaceFormat format;
-  format.setMajorVersion(3);
-  format.setMinorVersion(3);
-  format.setProfile(QSurfaceFormat::CoreProfile);
-  m_context->setFormat(format);
-  m_context->create();
+#include "shader/Voronoi.frag.h"
+#include "shader/Voronoi.vert.h"
 
-  m_surface = new QOffscreenSurface();
-  m_surface->setFormat(m_context->format());
-  m_surface->create();
+#define M_PI 3.14159265358979323846
 
-  m_context->makeCurrent(m_surface);
+////////////////////////////////////////////////////////////////////////////////
+/// Cell Encoder
 
-  m_vao = new QOpenGLVertexArrayObject();
-  m_vao->create();
+namespace CellEncoder {
+QVector3D encode(const uint32_t index) {
+    uint32_t r = (index >> 16) & 0xff;
+    uint32_t g = (index >> 8) & 0xff;
+    uint32_t b = (index >> 0) & 0xff;
+    return QVector3D(r / 255.0f, g / 255.0f, b / 255.0f);
+}
 
-  m_shaderProgram = new QOpenGLShaderProgram(m_context);
-  QOpenGLShader *vs = new QOpenGLShader(QOpenGLShader::Vertex);
-  vs->compileSourceFile(":/shader/Voronoi.vert");
-  QOpenGLShader *fs = new QOpenGLShader(QOpenGLShader::Fragment);
-  fs->compileSourceFile(":/shader/Voronoi.frag");
-  m_shaderProgram->addShader(vs);
-  m_shaderProgram->addShader(fs);
-  m_shaderProgram->link();
+uint32_t decode(const uint8_t& r, const uint8_t& g, const uint8_t& b) {
+    return 0x00000000 | (r << 16) | (g << 8) | b;
+}
+} // namespace CellEncoder
 
-  delete vs;
-  delete fs;
+////////////////////////////////////////////////////////////////////////////////
+/// Index Map
+
+IndexMap::IndexMap(size_t w, size_t h, size_t count) : width(w), height(h), m_numEncoded(count) {
+    m_data = std::vector<uint32_t>(w * h);
+}
+
+void IndexMap::set(size_t x, size_t y, uint32_t value) {
+    m_data[y * width + x] = value;
+}
+
+uint32_t IndexMap::get(size_t x, size_t y) const {
+    return m_data[y * width + x];
+}
+
+size_t IndexMap::count() const {
+    return m_numEncoded;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Voronoi Diagram
+
+VoronoiDiagram::VoronoiDiagram(QImage& density) : m_densityMap(density) {
+    m_context = new QOpenGLContext();
+    QSurfaceFormat format;
+    format.setMajorVersion(3);
+    format.setMinorVersion(3);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    m_context->setFormat(format);
+    m_context->create();
+
+    m_surface = new QOffscreenSurface(Q_NULLPTR, m_context);
+    m_surface->setFormat(m_context->format());
+    m_surface->create();
+
+    m_context->makeCurrent(m_surface);
+
+    m_vao = new QOpenGLVertexArrayObject(m_context);
+    m_vao->create();
+
+    m_shaderProgram = new QOpenGLShaderProgram(m_context);
+    m_shaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, voronoiVertex.c_str());
+    m_shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, voronoiFragment.c_str());
+    m_shaderProgram->link();
+
+    QOpenGLFramebufferObjectFormat fboFormat;
+    fboFormat.setAttachment(QOpenGLFramebufferObject::Depth);
+    m_fbo = new QOpenGLFramebufferObject(m_densityMap.width(), m_densityMap.height(), fboFormat);
+    QVector<QVector3D> cones = createConeDrawingData(m_densityMap.size());
+
+    m_vao->bind();
+
+    QOpenGLBuffer coneVBO = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    coneVBO.create();
+    coneVBO.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    coneVBO.bind();
+    coneVBO.allocate(cones.constData(), cones.size() * sizeof(QVector3D));
+    coneVBO.release();
+
+    m_shaderProgram->bind();
+
+    coneVBO.bind();
+    m_shaderProgram->enableAttributeArray(0);
+    m_shaderProgram->setAttributeBuffer(0, GL_FLOAT, 0, 3);
+    coneVBO.release();
+
+    m_shaderProgram->release();
+
+    m_vao->release();
 }
 
 VoronoiDiagram::~VoronoiDiagram() {
-  if (m_running) {
-    m_thread->quit();
-    m_thread->wait();
-
-    delete m_thread;
-  }
-
-  if (m_initialized) {
     delete m_fbo;
-    delete m_densityMap;
-    m_coneVBO->destroy();
-    delete m_coneVBO;
-  }
-
-  m_shaderProgram->deleteLater();
-  m_vao->deleteLater();
-  m_surface->deleteLater();
-  m_context->deleteLater();
+    delete m_context;
 }
 
-void VoronoiDiagram::init(const int width, const int height, QImage density,
-                          const int superSampling) {
-  m_width = width * superSampling;
-  m_height = height * superSampling;
-  m_superSampling = superSampling;
+IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
+    assert(!points.empty());
 
-  if (m_initialized) {
-    delete m_densityMap;
-    delete m_fbo;
-    m_coneVBO->destroy();
-    delete m_coneVBO;
-  }
+    m_context->makeCurrent(m_surface);
 
-  density = density.scaled(superSampling * density.size(), Qt::KeepAspectRatio,
-                           Qt::SmoothTransformation);
-  density = density.convertToFormat(QImage::Format_Grayscale8);
-  m_densityMap = new QImage(density);
+    QOpenGLFunctions_3_3_Core* gl = m_context->versionFunctions<QOpenGLFunctions_3_3_Core>();
 
-  m_context->makeCurrent(m_surface);
+    m_vao->bind();
 
-  QOpenGLFramebufferObjectFormat fboFormat;
-  fboFormat.setAttachment(QOpenGLFramebufferObject::Depth);
-  m_fbo = new QOpenGLFramebufferObject(m_width, m_height, fboFormat);
-  initConeDrawingData();
+    m_shaderProgram->bind();
 
-  m_initialized = true;
+    QOpenGLBuffer vboPositions = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    vboPositions.create();
+    vboPositions.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    vboPositions.bind();
+    vboPositions.allocate(points.constData(), points.size() * sizeof(QVector2D));
+    m_shaderProgram->enableAttributeArray(1);
+    m_shaderProgram->setAttributeBuffer(1, GL_FLOAT, 0, 2);
+    gl->glVertexAttribDivisor(1, 1);
+    vboPositions.release();
+
+    std::vector<QVector3D> colors(points.size());
+    std::generate(colors.begin(),
+                  colors.end(), [n = 0]() mutable { return CellEncoder::encode(n++); });
+
+    QOpenGLBuffer vboColors = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    vboColors.create();
+    vboColors.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    vboColors.bind();
+    vboColors.allocate(colors.data(), colors.size() * sizeof(QVector3D));
+    m_shaderProgram->enableAttributeArray(2);
+    m_shaderProgram->setAttributeBuffer(2, GL_FLOAT, 0, 3);
+    gl->glVertexAttribDivisor(2, 1);
+    vboColors.release();
+
+    m_fbo->bind();
+
+    gl->glViewport(0, 0, m_densityMap.width(), m_densityMap.height());
+
+    gl->glDisable(GL_MULTISAMPLE);
+    gl->glDisable(GL_DITHER);
+
+    gl->glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
+
+    gl->glEnable(GL_DEPTH_TEST);
+
+    gl->glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    gl->glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, m_coneVertices, points.size());
+
+    m_shaderProgram->release();
+
+    m_vao->release();
+
+    QImage voronoiDiagram = m_fbo->toImage();
+    //  voronoiDiagram.save("voronoiDiagram.png");
+
+    m_fbo->release();
+    m_context->doneCurrent();
+
+    IndexMap idxMap(m_fbo->width(), m_fbo->height(), points.size());
+
+    for (int y = 0; y < m_fbo->height(); ++y) {
+        for (int x = 0; x < m_fbo->width(); ++x) {
+            QRgb voroPixel = voronoiDiagram.pixel(x, y);
+
+            uint8_t r = qRed(voroPixel);
+            uint8_t g = qGreen(voroPixel);
+            uint8_t b = qBlue(voroPixel);
+
+            size_t index = CellEncoder::decode(r, g, b);
+            assert(index <= points.size());
+
+            idxMap.set(x, y, index);
+        }
+    }
+    return idxMap;
 }
 
-void VoronoiDiagram::calculate(const QVector<QVector2D> &points) {
-  if (!m_initialized) {
-    std::cerr << "Voronoi diagram not initialized! You need to call >>> "
-                 "init(int width, int height) <<< first!";
-    return;
-  }
+// Calculate the number of slices required to ensure the given max. meshing error.
+// See "Fast Computation of Generalized Voronoi Diagram Using Graphics Hardware",
+// Hoff et. al., Proc. of SIGGRAPH 99.
 
-  m_thread =
-      new VoronoiThread(m_width, m_height, m_context, m_surface, m_vao, m_fbo,
-                        m_shaderProgram, m_densityMap, points, m_coneVertices);
-
-  connect(m_thread, &VoronoiThread::finished, this, &VoronoiDiagram::finished);
-  m_running = true;
-
-  m_thread->start();
+uint calcNumConeSlices(const float radius, const float maxError) {
+    float alpha = 2.0f * std::acos((radius - maxError) / radius);
+    return (unsigned)(2 * M_PI / alpha + 0.5f);
 }
 
-void VoronoiDiagram::finished(const QVector<VoronoiCell> &cells) {
-  m_thread->quit();
-  m_thread->wait();
+QVector<QVector3D> VoronoiDiagram::createConeDrawingData(const QSize& size) {
+    float radius = std::sqrt(2.0f);
+    float maxError = 1.0f / (size.width() > size.height() ? size.width() : size.height());
+    uint numConeSlices = calcNumConeSlices(radius, maxError);
 
-  delete m_thread;
-  m_running = false;
+    float angleIncr = 2.0f * M_PI / numConeSlices;
+    float height = 1.99f;
 
-  m_context->moveToThread(this->thread());
+    QVector<QVector3D> conePoints;
+    conePoints.push_back(QVector3D(0.0f, 0.0f, height));
 
-  emit passResult(cells);
-}
+    float aspect = (float)size.width() / size.height();
 
-void VoronoiDiagram::initConeDrawingData() {
-  float radius = std::sqrt(2.0f);
-  float maxError = 1.0f / (m_width > m_height ? m_width : m_height);
-  float alpha = 2 * std::acos((radius - maxError) / radius);
-  uint numConeSlices = (unsigned)(2 * M_PI / alpha + 0.5);
+    for (uint i = 0; i < numConeSlices; ++i) {
+        conePoints.push_back(QVector3D(radius * std::cos(i * angleIncr),
+                                       aspect * radius * std::sin(i * angleIncr), height - radius));
+    }
 
-  float angleIncr = 2.0 * M_PI / numConeSlices;
-  float height = 1.99f;
+    conePoints.push_back(QVector3D(radius, 0.0f, height - radius));
 
-  QVector<QVector3D> conePoints;
-  conePoints.push_back(QVector3D(0.0f, 0.0f, height));
-
-  float aspect = (float)m_width / m_height;
-
-  for (uint i = 0; i < numConeSlices; ++i) {
-    conePoints.push_back(QVector3D(radius * std::cos(i * angleIncr),
-                                   aspect * radius * std::sin(i * angleIncr),
-                                   height - radius));
-  }
-
-  conePoints.push_back(QVector3D(radius, 0.0f, height - radius));
-
-  m_coneVertices = conePoints.size();
-
-  m_vao->bind();
-
-  m_coneVBO = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-  m_coneVBO->create();
-  m_coneVBO->setUsagePattern(QOpenGLBuffer::StaticDraw);
-  m_coneVBO->bind();
-  m_coneVBO->allocate(conePoints.constData(),
-                      conePoints.size() * sizeof(QVector3D));
-  m_coneVBO->release();
-
-  m_shaderProgram->bind();
-
-  m_coneVBO->bind();
-  m_shaderProgram->enableAttributeArray(0);
-  m_shaderProgram->setAttributeBuffer(0, GL_FLOAT, 0, 3);
-  m_coneVBO->release();
-
-  m_shaderProgram->release();
-
-  m_vao->release();
+    m_coneVertices = conePoints.size();
+    return conePoints;
 }

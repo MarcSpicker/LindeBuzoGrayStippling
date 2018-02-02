@@ -1,29 +1,30 @@
 #ifndef STIPPLEVIEWER_H
 #define STIPPLEVIEWER_H
 
-#include <QtWidgets>
+#include <QGraphicsView>
+
+#include "lbgstippling.h"
 
 class StippleViewer : public QGraphicsView {
 
-public:
-  StippleViewer(QWidget *parent);
-  ~StippleViewer();
-  void init(const QImage &img);
+    Q_OBJECT
 
-public slots:
-  void displayPoints(const QVector<QVector2D> &points,
-                     const QVector<float> &sizes,
-                     const QVector<QColor> &colors);
+  public:
+    StippleViewer(const QImage& img, QWidget* parent);
+    void stipple(const LBGStippling::Params& params);
+    QPixmap getImage();
+    void setInputImage(const QImage& img);
+    void saveImageSVG(const QString& path);
+    void displayPoints(const std::vector<Stipple>& stipples);
 
-  void saveImagePNG(const QString &path);
-  void saveImageSVG(const QString &path);
-  void inputImageChanged(const QString &path);
+  signals:
+    void finished();
+    void inputImageChanged();
+    void iterationStatus(int iteration, int numberPoints, int splits, int merges);
 
-private:
-  QWidget *m_parent;
-  QGraphicsScene *m_scene;
-  int m_width;
-  int m_height;
+  private:
+    LBGStippling m_stippling;
+    QImage m_image;
 };
 
 #endif // STIPPLEVIEWER_H
