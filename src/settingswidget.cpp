@@ -13,7 +13,7 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* initialPointLabel = new QLabel("Initial points:", this);
     QSpinBox* spinInitialPoints = new QSpinBox(this);
-    spinInitialPoints->setRange(1, 10000);
+    spinInitialPoints->setRange(1, 100000);
     spinInitialPoints->setValue(m_params.initialPoints);
     spinInitialPoints->setToolTip(
         "The number of points the algorithm starts with, must be at least one.");
@@ -22,7 +22,7 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* initialPointSizeLabel = new QLabel("Point Size:", this);
     QDoubleSpinBox* spinInitialPointSize = new QDoubleSpinBox(this);
-    spinInitialPointSize->setRange(1.0f, 20.0f);
+    spinInitialPointSize->setRange(0.1f, 50.0f);
     spinInitialPointSize->setValue(m_params.initialPointSize);
     spinInitialPointSize->setSingleStep(0.1f);
     spinInitialPointSize->setToolTip("The point size used by the algorithm. This "
@@ -41,7 +41,7 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* minPointSize = new QLabel("Minimal Point Size:", this);
     QDoubleSpinBox* spinMinPointSize = new QDoubleSpinBox(this);
-    spinMinPointSize->setRange(1.0f, 10.0f);
+    spinMinPointSize->setRange(0.1f, 50.0f);
     spinMinPointSize->setValue(m_params.pointSizeMin);
     spinMinPointSize->setSingleStep(0.1f);
     spinMinPointSize->setToolTip(
@@ -51,7 +51,7 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* maxPointSize = new QLabel("Maximal Point Size:", this);
     QDoubleSpinBox* spinMaxPointSize = new QDoubleSpinBox(this);
-    spinMaxPointSize->setRange(1.0f, 10.0f);
+    spinMaxPointSize->setRange(0.1f, 50.0f);
     spinMaxPointSize->setValue(m_params.pointSizeMax);
     spinMaxPointSize->setSingleStep(0.1f);
     spinMaxPointSize->setToolTip(
@@ -92,7 +92,7 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
     adaptiveHysteresis->setChecked(m_params.adaptiveHysteresis);
     adaptiveHysteresis->setToolTip(
         "If enabled, the hysteresis will increase over time (linearly up to "
-        "twice the hysteresis over the maximum number of iterations.");
+        "twice the hysteresis over the maximum number of iterations).");
     connect(adaptiveHysteresis, &QCheckBox::clicked,
             [this](bool value) { m_params.adaptiveHysteresis = value; });
 
@@ -108,7 +108,7 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* superSampleLabel = new QLabel("Super-Sampling Factor:", this);
     QSpinBox* spinSuperSample = new QSpinBox(this);
-    spinSuperSample->setRange(1, 2);
+    spinSuperSample->setRange(1, 3);
     spinSuperSample->setValue(m_params.superSamplingFactor);
     spinSuperSample->setToolTip("Increases the size and percision of the Voronoi "
                                 "diagram, but makes the calculation slower.");

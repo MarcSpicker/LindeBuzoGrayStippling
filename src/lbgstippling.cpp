@@ -62,7 +62,7 @@ float stippleSize(const VoronoiCell& cell, const Params& params) {
 
 float currentHysteresis(size_t i, const Params& params) {
     if (params.adaptiveHysteresis) {
-        float delta = params.hysteresis / (params.maxIterations - 1);
+        float delta = params.hysteresis / std::max<int>(params.maxIterations - 1, 1);
         return params.hysteresis + i * delta;
     } else {
         return params.hysteresis;
@@ -70,7 +70,7 @@ float currentHysteresis(size_t i, const Params& params) {
 }
 
 bool notFinished(const Status& status, const Params& params) {
-    auto[iteration, size, splits, merges] = status;
+    auto[iteration, size, splits, merges, hysteresis] = status;
     return !((splits == 0 && merges == 0) || (iteration == params.maxIterations));
 }
 
@@ -110,6 +110,7 @@ std::vector<Stipple> LBGStippling::stipple(const QImage& density, const Params& 
         stipples.clear();
 
         float hysteresis = currentHysteresis(status.iteration, params);
+        status.hysteresis = hysteresis;
 
         for (const auto& cell : cells) {
             float totalDensity = cell.sumDensity;

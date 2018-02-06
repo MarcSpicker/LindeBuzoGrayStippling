@@ -26,11 +26,13 @@ MainWindow::MainWindow() {
     setStatusBar(m_statusBar);
 
     connect(m_stippleViewer, &StippleViewer::iterationStatus,
-            [this](int iteration, int numberPoints, int splits, int merges) {
-                m_statusBar->showMessage("Iteration: " + QString::number(iteration) +
-                                         " | Number points: " + QString::number(numberPoints) +
-                                         " | Splits: " + QString::number(splits) +
-                                         " | Merges: " + QString::number(merges));
+            [this](int iteration, int numberPoints, int splits, int merges, float hysteresis) {
+                m_statusBar->showMessage(
+                    "Iteration: " + QString::number(iteration) +
+                    " | Number points: " + QString::number(numberPoints) +
+                    " | Current hysteresis: " + QString::number(hysteresis, 'f', 2) +
+                    " | Splits: " + QString::number(splits) +
+                    " | Merges: " + QString::number(merges));
             });
     connect(m_stippleViewer, &StippleViewer::inputImageChanged,
             [this]() { m_statusBar->clearMessage(); });

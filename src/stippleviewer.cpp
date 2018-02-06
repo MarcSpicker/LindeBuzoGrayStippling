@@ -23,7 +23,8 @@ StippleViewer::StippleViewer(const QImage& img, QWidget* parent)
 
     m_stippling = LBGStippling();
     m_stippling.setStatusCallback([this](const auto& status) {
-        emit iterationStatus(status.iteration + 1, status.size, status.splits, status.merges);
+        emit iterationStatus(status.iteration + 1, status.size, status.splits, status.merges,
+                             status.hysteresis);
     });
 
     m_stippling.setStippleCallback([this](const auto& stipples) { displayPoints(stipples); });
@@ -41,7 +42,7 @@ void StippleViewer::displayPoints(const std::vector<Stipple>& stipples) {
 }
 
 QPixmap StippleViewer::getImage() {
-    QPixmap pixmap(this->scene()->sceneRect().size().toSize()); 
+    QPixmap pixmap(this->scene()->sceneRect().size().toSize());
     pixmap.fill(Qt::white);
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -77,7 +78,7 @@ void StippleViewer::setInputImage(const QImage& img) {
     emit inputImageChanged();
 }
 
-void StippleViewer::stipple(const LBGStippling::Params& params) {
+void StippleViewer::stipple(const LBGStippling::Params params) {
     // TODO: Handle return value
     m_stippling.stipple(m_image, params);
     finished();

@@ -40,6 +40,7 @@ class LBGStippling {
         size_t size;
         size_t splits;
         size_t merges;
+        float hysteresis;
     };
 
     template <class T>
