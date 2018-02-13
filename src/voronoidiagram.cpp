@@ -10,7 +10,7 @@
 #include "shader/Voronoi.frag.h"
 #include "shader/Voronoi.vert.h"
 
-#define M_PI 3.14159265358979323846
+const float pi = 3.14159265358979323846f;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Cell Encoder
@@ -190,7 +190,7 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
 
 uint calcNumConeSlices(const float radius, const float maxError) {
     float alpha = 2.0f * std::acos((radius - maxError) / radius);
-    return (unsigned)(2 * M_PI / alpha + 0.5f);
+    return (unsigned)(2 * pi / alpha + 0.5f);
 }
 
 QVector<QVector3D> VoronoiDiagram::createConeDrawingData(const QSize& size) {
@@ -198,7 +198,7 @@ QVector<QVector3D> VoronoiDiagram::createConeDrawingData(const QSize& size) {
     float maxError = 1.0f / (size.width() > size.height() ? size.width() : size.height());
     uint numConeSlices = calcNumConeSlices(radius, maxError);
 
-    float angleIncr = 2.0f * M_PI / numConeSlices;
+    float angleIncr = 2.0f * pi / numConeSlices;
     float height = 1.99f;
 
     QVector<QVector3D> conePoints;
