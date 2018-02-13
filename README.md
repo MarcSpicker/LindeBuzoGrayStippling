@@ -2,6 +2,7 @@
 
 An interactive demo application for the algorithm proposed in our SIGGRAPH Asia 2017 technical paper.
 Our project website (paper, video, examples) can be found [here](http://graphics.uni-konstanz.de/publikationen/Deussen2017LindeBuzoGray/index.html).
+I want to thank [Jochen Görtler](https://github.com/grtlr) for his help with this implementation.
 
 <img src="https://github.com/MarcSpicker/LindeBuzoGrayStippling/blob/master/Bridge.gif?raw=true" alt="Example animation of our algorithm." width="800px" height="600px">
 
