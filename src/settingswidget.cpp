@@ -22,9 +22,9 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* initialPointSizeLabel = new QLabel("Point Size:", this);
     QDoubleSpinBox* spinInitialPointSize = new QDoubleSpinBox(this);
-    spinInitialPointSize->setRange(0.1f, 50.0f);
+    spinInitialPointSize->setRange(0.1, 50.0);
     spinInitialPointSize->setValue(m_params.initialPointSize);
-    spinInitialPointSize->setSingleStep(0.1f);
+    spinInitialPointSize->setSingleStep(0.1);
     spinInitialPointSize->setToolTip("The point size used by the algorithm. This "
                                      "will only be used when adaptive point size "
                                      "is off.");
@@ -41,9 +41,9 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* minPointSize = new QLabel("Minimal Point Size:", this);
     QDoubleSpinBox* spinMinPointSize = new QDoubleSpinBox(this);
-    spinMinPointSize->setRange(0.1f, 50.0f);
+    spinMinPointSize->setRange(0.1, 50.0);
     spinMinPointSize->setValue(m_params.pointSizeMin);
-    spinMinPointSize->setSingleStep(0.1f);
+    spinMinPointSize->setSingleStep(0.1);
     spinMinPointSize->setToolTip(
         "The minimum point size used when adaptive point size is enabled.");
     connect(spinMinPointSize, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -51,9 +51,9 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* maxPointSize = new QLabel("Maximal Point Size:", this);
     QDoubleSpinBox* spinMaxPointSize = new QDoubleSpinBox(this);
-    spinMaxPointSize->setRange(0.1f, 50.0f);
+    spinMaxPointSize->setRange(0.1, 50.0);
     spinMaxPointSize->setValue(m_params.pointSizeMax);
-    spinMaxPointSize->setSingleStep(0.1f);
+    spinMaxPointSize->setSingleStep(0.1);
     spinMaxPointSize->setToolTip(
         "The maximum point size used when adaptive point size is enabled.");
     connect(spinMaxPointSize, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -78,9 +78,9 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
     QLabel* hysteresisLabel = new QLabel("Hysteresis:", this);
     QDoubleSpinBox* spinHysterresis = new QDoubleSpinBox(this);
-    spinHysterresis->setRange(0.1f, 3.0f);
+    spinHysterresis->setRange(0.1, 3.0);
     spinHysterresis->setValue(m_params.hysteresis);
-    spinHysterresis->setSingleStep(0.1f);
+    spinHysterresis->setSingleStep(0.1);
     spinHysterresis->setToolTip("How close to 'perfect' the cell size has to be "
                                 "in order not to be split:\n Lower values mean "
                                 "slower convergence but higher quality results "
@@ -88,13 +88,15 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
     connect(spinHysterresis, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             [this](double value) { m_params.hysteresis = value; });
 
-    QCheckBox* adaptiveHysteresis = new QCheckBox("Use adaptive hysteresis.", this);
-    adaptiveHysteresis->setChecked(m_params.adaptiveHysteresis);
-    adaptiveHysteresis->setToolTip(
-        "If enabled, the hysteresis will increase over time (linearly up to "
-        "twice the hysteresis over the maximum number of iterations).");
-    connect(adaptiveHysteresis, &QCheckBox::clicked,
-            [this](bool value) { m_params.adaptiveHysteresis = value; });
+    QLabel* hysteresisDeltaLabel = new QLabel("Hysteresis increment:", this);
+    QDoubleSpinBox* spinHysteresisDelta = new QDoubleSpinBox(this);
+    spinHysteresisDelta->setRange(0.0, 0.1);
+    spinHysteresisDelta->setValue(m_params.hysteresisDelta);
+    spinHysteresisDelta->setSingleStep(0.001);
+    spinHysteresisDelta->setDecimals(3);
+    spinHysteresisDelta->setToolTip("The increment of the hysteresis in each iteration.");
+    connect(spinHysteresisDelta, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            [this](double value) { m_params.hysteresisDelta = value; });
 
     QLabel* maxIterLabel = new QLabel("Maximum Iterations:", this);
     QSpinBox* spinMaxIter = new QSpinBox(this);
@@ -119,7 +121,8 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
     algoGroup->setLayout(algoGroupLayout);
     algoGroupLayout->addWidget(hysteresisLabel, 0, 0);
     algoGroupLayout->addWidget(spinHysterresis, 0, 1);
-    algoGroupLayout->addWidget(adaptiveHysteresis, 1, 0);
+    algoGroupLayout->addWidget(hysteresisDeltaLabel, 1, 0);
+    algoGroupLayout->addWidget(spinHysteresisDelta, 1, 1);
     algoGroupLayout->addWidget(maxIterLabel, 2, 0);
     algoGroupLayout->addWidget(spinMaxIter, 2, 1);
     algoGroupLayout->addWidget(superSampleLabel, 3, 0);
@@ -154,8 +157,12 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
     m_savePNG->setEnabled(false);
     m_saveSVG = new QPushButton("SVG", this);
     m_saveSVG->setEnabled(false);
+    m_savePDF = new QPushButton("PDF", this);
+    m_savePDF->setEnabled(false);
+
     saveLayout->addWidget(m_savePNG);
     saveLayout->addWidget(m_saveSVG);
+    saveLayout->addWidget(m_savePDF);
     saveGroup->setLayout(saveLayout);
 
     connect(m_saveSVG, &QPushButton::pressed, [this]() {
@@ -172,6 +179,22 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 
         m_stippleViewer->saveImageSVG(path);
     });
+
+    connect(m_savePDF, &QPushButton::pressed, [this]() {
+        QFileDialog dialog(this, tr("Save Image as PDF"), QString(), tr("PDF (*.pdf)"));
+        dialog.setAcceptMode(QFileDialog::AcceptSave);
+        dialog.setDefaultSuffix("pdf");
+        if (dialog.exec() == 0)
+            return;
+
+        QString path = dialog.selectedFiles().first();
+
+        if (path.isEmpty())
+            return;
+
+        m_stippleViewer->saveImagePDF(path);
+    });
+
     connect(m_stippleViewer, &StippleViewer::finished, this, &SettingsWidget::enableSaveButtons);
 
     connect(m_savePNG, &QPushButton::pressed, [this]() {
@@ -229,9 +252,11 @@ SettingsWidget::SettingsWidget(StippleViewer* stippleViewer, QWidget* parent)
 void SettingsWidget::enableSaveButtons() {
     m_savePNG->setEnabled(true);
     m_saveSVG->setEnabled(true);
+    m_savePDF->setEnabled(true);
 }
 
 void SettingsWidget::disableSaveButtons() {
     m_savePNG->setEnabled(false);
     m_saveSVG->setEnabled(false);
+    m_savePDF->setEnabled(false);
 }

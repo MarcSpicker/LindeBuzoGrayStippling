@@ -61,12 +61,7 @@ float stippleSize(const VoronoiCell& cell, const Params& params) {
 }
 
 float currentHysteresis(size_t i, const Params& params) {
-    if (params.adaptiveHysteresis) {
-        float delta = params.hysteresis / std::max<int>(params.maxIterations - 1, 1);
-        return params.hysteresis + i * delta;
-    } else {
-        return params.hysteresis;
-    }
+    return params.hysteresis + i * params.hysteresisDelta;
 }
 
 bool notFinished(const Status& status, const Params& params) {

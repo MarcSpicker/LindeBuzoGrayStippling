@@ -32,7 +32,7 @@ class LBGStippling {
         size_t maxIterations = 50;
 
         float hysteresis = 0.6f;
-        bool adaptiveHysteresis = true;
+        float hysteresisDelta = 0.01f;
     };
 
     struct Status {

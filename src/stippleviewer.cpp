@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <QCoreApplication>
+#include <QPrinter>
 #include <QSvgGenerator>
 
 StippleViewer::StippleViewer(const QImage& img, QWidget* parent)
@@ -61,6 +62,17 @@ void StippleViewer::saveImageSVG(const QString& path) {
     painter.begin(&generator);
     this->scene()->render(&painter);
     painter.end();
+}
+
+void StippleViewer::saveImagePDF(const QString& path) {
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setCreator("Weighted Linde-Buzo-Gray Stippling");
+    printer.setOutputFileName(path);
+    printer.setPaperSize(m_image.size(), QPrinter::Point);
+    printer.setFullPage(true);
+    QPainter painter(&printer);
+    this->render(&painter);
 }
 
 void StippleViewer::setInputImage(const QImage& img) {

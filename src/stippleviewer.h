@@ -15,6 +15,7 @@ class StippleViewer : public QGraphicsView {
     QPixmap getImage();
     void setInputImage(const QImage& img);
     void saveImageSVG(const QString& path);
+    void saveImagePDF(const QString& path);
     void displayPoints(const std::vector<Stipple>& stipples);
 
   signals:

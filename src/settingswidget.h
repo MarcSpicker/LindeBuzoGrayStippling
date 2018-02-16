@@ -18,6 +18,7 @@ class SettingsWidget : public QWidget {
 
     QPushButton* m_savePNG;
     QPushButton* m_saveSVG;
+    QPushButton* m_savePDF;
 
     void enableSaveButtons();
     void disableSaveButtons();
