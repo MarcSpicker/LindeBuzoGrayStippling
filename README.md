@@ -42,6 +42,7 @@ The following libraries are required:
 * Qt5Core
 * Qt5Widgets
 * Qt5Svg
+* Qt5PrintSupport
 
 ### Building
 ```bash
