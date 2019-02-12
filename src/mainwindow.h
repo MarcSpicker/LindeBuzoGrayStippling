@@ -6,13 +6,12 @@
 class StippleViewer;
 
 class MainWindow : public QMainWindow {
+ public:
+  MainWindow();
 
-  public:
-    MainWindow();
-
-  private:
-    StippleViewer* m_stippleViewer;
-    QStatusBar* m_statusBar;
+ private:
+  StippleViewer *m_stippleViewer;
+  QStatusBar *m_statusBar;
 };
 
-#endif // MAINWINDOW_H
+#endif  // MAINWINDOW_H

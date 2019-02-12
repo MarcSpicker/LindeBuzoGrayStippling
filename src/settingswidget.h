@@ -8,20 +8,20 @@
 class StippleViewer;
 
 class SettingsWidget : public QWidget {
+ public:
+  explicit SettingsWidget(StippleViewer *stippleViewer,
+                          QWidget *parent = nullptr);
 
-  public:
-    explicit SettingsWidget(StippleViewer* stippleViewer, QWidget* parent = nullptr);
+ private:
+  LBGStippling::Params m_params;
+  StippleViewer *m_stippleViewer;
 
-  private:
-    LBGStippling::Params m_params;
-    StippleViewer* m_stippleViewer;
+  QPushButton *m_savePNG;
+  QPushButton *m_saveSVG;
+  QPushButton *m_savePDF;
 
-    QPushButton* m_savePNG;
-    QPushButton* m_saveSVG;
-    QPushButton* m_savePDF;
-
-    void enableSaveButtons();
-    void disableSaveButtons();
+  void enableSaveButtons();
+  void disableSaveButtons();
 };
 
-#endif // SETTINGSWIDGET_H
+#endif  // SETTINGSWIDGET_H
