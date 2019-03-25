@@ -32,9 +32,11 @@ StippleViewer::StippleViewer(const QImage &img, QWidget *parent)
 void StippleViewer::displayPoints(const std::vector<Stipple> &stipples) {
   this->scene()->clear();
   for (const auto &s : stipples) {
-    auto x = s.pos.x() * m_image.width() - s.size / 2.0f;
-    auto y = s.pos.y() * m_image.height() - s.size / 2.0f;
-    this->scene()->addEllipse(x, y, s.size, s.size, Qt::NoPen, s.color);
+    double x = static_cast<double>(s.pos.x() * m_image.width() - s.size / 2.0f);
+    double y =
+        static_cast<double>(s.pos.y() * m_image.height() - s.size / 2.0f);
+    double size = static_cast<double>(s.size);
+    this->scene()->addEllipse(x, y, size, size, Qt::NoPen, s.color);
   }
   // TODO: Fix event handling
   QCoreApplication::processEvents();

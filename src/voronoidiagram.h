@@ -10,17 +10,17 @@
 
 class IndexMap {
  public:
-  size_t width;
-  size_t height;
+  int32_t width;
+  int32_t height;
 
-  IndexMap(size_t w, size_t h, size_t count);
-  void set(const size_t x, const size_t y, const uint32_t value);
-  uint32_t get(size_t x, const size_t y) const;
-  size_t count() const;
+  IndexMap(int32_t w, int32_t h, int32_t count);
+  void set(const int32_t x, const int32_t y, const uint32_t value);
+  uint32_t get(int32_t x, const int32_t y) const;
+  int32_t count() const;
 
  private:
-  size_t m_numEncoded;
-  std::vector<uint32_t> m_data;
+  int32_t m_numEncoded;
+  QVector<uint32_t> m_data;
 };
 
 class VoronoiDiagram {

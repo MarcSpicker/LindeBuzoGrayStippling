@@ -29,20 +29,20 @@ uint32_t decode(const uint32_t& r, const uint32_t& g, const uint32_t& b) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Index Map
 
-IndexMap::IndexMap(size_t w, size_t h, size_t count)
+IndexMap::IndexMap(int32_t w, int32_t h, int32_t count)
     : width(w), height(h), m_numEncoded(count) {
-  m_data = std::vector<uint32_t>(w * h);
+  m_data = QVector<uint32_t>(w * h);
 }
 
-void IndexMap::set(const size_t x, const size_t y, const uint32_t value) {
+void IndexMap::set(const int32_t x, const int32_t y, const uint32_t value) {
   m_data[y * width + x] = value;
 }
 
-uint32_t IndexMap::get(const size_t x, const size_t y) const {
+uint32_t IndexMap::get(const int32_t x, const int32_t y) const {
   return m_data[y * width + x];
 }
 
-size_t IndexMap::count() const { return m_numEncoded; }
+int32_t IndexMap::count() const { return m_numEncoded; }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Voronoi Diagram
@@ -126,9 +126,10 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
   gl->glVertexAttribDivisor(1, 1);
   vboPositions.release();
 
-  std::vector<QVector3D> colors(points.size());
+  QVector<QVector3D> colors(points.size());
+  uint32_t n = 0;
   std::generate(colors.begin(), colors.end(),
-                [n = 0]() mutable { return CellEncoder::encode(n++); });
+                [&n]() mutable { return CellEncoder::encode(n++); });
 
   QOpenGLBuffer vboColors = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
   vboColors.create();
@@ -172,9 +173,9 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
     for (int x = 0; x < m_fbo->width(); ++x) {
       QRgb voroPixel = voronoiDiagram.pixel(x, y);
 
-      uint32_t r = qRed(voroPixel);
-      uint32_t g = qGreen(voroPixel);
-      uint32_t b = qBlue(voroPixel);
+      int r = qRed(voroPixel);
+      int g = qGreen(voroPixel);
+      int b = qBlue(voroPixel);
 
       uint32_t index = CellEncoder::decode(r, g, b);
       assert(index <= points.size());
@@ -191,7 +192,7 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
 
 uint calcNumConeSlices(const float radius, const float maxError) {
   const float alpha = 2.0f * std::acos((radius - maxError) / radius);
-  return static_cast<uint>(2 * M_PI / alpha + 0.5f);
+  return static_cast<uint>(2 * M_PIf32 / alpha + 0.5f);
 }
 
 QVector<QVector3D> VoronoiDiagram::createConeDrawingData(const QSize& size) {
@@ -200,7 +201,7 @@ QVector<QVector3D> VoronoiDiagram::createConeDrawingData(const QSize& size) {
       1.0f / (size.width() > size.height() ? size.width() : size.height());
   const uint numConeSlices = calcNumConeSlices(radius, maxError);
 
-  const float angleIncr = 2.0f * M_PI / numConeSlices;
+  const float angleIncr = 2.0f * M_PIf32 / numConeSlices;
   const float height = 1.99f;
 
   QVector<QVector3D> conePoints;

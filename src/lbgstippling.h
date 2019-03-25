@@ -17,11 +17,11 @@ class LBGStippling {
  public:
   struct Params {
     size_t initialPoints = 1;
-    float initialPointSize = 4.0;
+    float initialPointSize = 4.0f;
 
     bool adaptivePointSize = true;
-    float pointSizeMin = 2.0;
-    float pointSizeMax = 4.0;
+    float pointSizeMin = 2.0f;
+    float pointSizeMax = 4.0f;
 
     size_t superSamplingFactor = 1;
     size_t maxIterations = 50;

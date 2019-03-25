@@ -18,9 +18,9 @@ std::vector<VoronoiCell> accumulateCells(const IndexMap& map,
   std::vector<VoronoiCell> cells = std::vector<VoronoiCell>(map.count());
   std::vector<Moments> moments = std::vector<Moments>(map.count());
 
-  for (size_t x = 0; x < map.width; ++x) {
-    for (size_t y = 0; y < map.height; ++y) {
-      size_t index = map.get(x, y);
+  for (int x = 0; x < map.width; ++x) {
+    for (int y = 0; y < map.height; ++y) {
+      uint32_t index = map.get(x, y);
 
       QRgb densityPixel = density.pixel(x, y);
       float density = std::max(1.0f - qGray(densityPixel) / 255.0f,

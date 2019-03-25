@@ -45,13 +45,13 @@ QVector2D jitter(QVector2D s) {
 
 float getSplitValueUpper(float pointDiameter, float hysteresis,
                          size_t superSampling) {
-  const float pointArea = M_PI * pow2(pointDiameter / 2.0f);
+  const float pointArea = M_PIf32 * pow2(pointDiameter / 2.0f);
   return (1.0f + hysteresis / 2.0f) * pointArea * pow2(superSampling);
 }
 
 float getSplitValueLower(float pointDiameter, float hysteresis,
                          size_t superSampling) {
-  const float pointArea = M_PI * pow2(pointDiameter / 2.0f);
+  const float pointArea = M_PIf32 * pow2(pointDiameter / 2.0f);
   return (1.0f - hysteresis / 2.0f) * pointArea * pow2(superSampling);
 }
 
@@ -136,7 +136,7 @@ std::vector<Stipple> LBGStippling::stipple(const QImage &density,
 
       // cell too large - split
       const float area = std::max(1.0f, cell.area);
-      const float circleRadius = std::sqrt(area / M_PI);
+      const float circleRadius = std::sqrt(area / M_PIf32);
       QVector2D splitVector = QVector2D(0.5f * circleRadius, 0.0f);
 
       const float a = cell.orientation;
