@@ -39,12 +39,12 @@ class LBGStippling {
   };
 
   template <class T>
-  using Report = std::function<void(const T &)>;
+  using Report = std::function<void(const T&)>;
 
   LBGStippling();
 
-  std::vector<Stipple> stipple(const QImage &density,
-                               const Params &params) const;
+  std::vector<Stipple> stipple(const QImage& density,
+                               const Params& params) const;
 
   // TODO: Rename and method chaining.
   void setStatusCallback(Report<Status> statusCB);
