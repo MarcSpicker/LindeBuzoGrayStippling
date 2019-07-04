@@ -11,7 +11,7 @@ set(PROJECT_DIR ${PROJECT_SOURCE_DIR})
 
 # add headers to project
 set(HEADERS
-	${PROJECT_DIR}/src/mainwindow.h
+        ${PROJECT_DIR}/src/mainwindow.h
         ${PROJECT_DIR}/src/stippleviewer.h
         ${PROJECT_DIR}/src/voronoidiagram.h
         ${PROJECT_DIR}/src/voronoicell.h
@@ -30,9 +30,15 @@ set(SOURCES
         ${PROJECT_DIR}/src/voronoicell.cpp
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-
 find_package(Qt5 5.10 COMPONENTS Core Widgets Svg PrintSupport REQUIRED)
+
+include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${Qt5Core_INCLUDE_DIRS}
+        ${Qt5Widgets_INCLUDE_DIRS}
+        ${Qt5Svg_INCLUDE_DIRS} 
+        ${Qt5PrintSupport_INCLUDE_DIRS}
+)
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES} resources.qrc)
 
