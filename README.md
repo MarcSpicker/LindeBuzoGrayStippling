@@ -9,9 +9,9 @@ I want to thank [Jochen Görtler](https://github.com/grtlr) for his help with th
 ### Results
 
 <p style="width:800px;text-align:center;">
-    <img src="clooney.png" alt="Stippled George Clooney." height="375px">
-    <img src="dicaprio.png" alt="Stippled Leonardo DiCaprio." height="375px">
-    <img src="pitt.png" alt="Stippled Brad Pitt." height="375px">
+    <img src="clooney.png" alt="Stippled George Clooney." height="400px">
+    <img src="dicaprio.png" alt="Stippled Leonardo DiCaprio." height="400px">
+    <img src="pitt.png" alt="Stippled Brad Pitt." height="400px">
 </p>
 
 ### Disclaimer
