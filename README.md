@@ -6,6 +6,14 @@ I want to thank [Jochen Görtler](https://github.com/grtlr) for his help with th
 
 <img src="https://github.com/MarcSpicker/LindeBuzoGrayStippling/blob/master/Bridge.gif?raw=true" alt="Example animation of our algorithm." width="800px" height="600px">
 
+### Results
+
+<p style="width:800px;text-align:center;">
+    <img src="clooney.png" alt="Stippled George Clooney." height="375px">
+    <img src="dicaprio.png" alt="Stippled Leonardo DiCaprio." height="375px">
+    <img src="pitt.png" alt="Stippled Brad Pitt." height="375px">
+</p>
+
 ### Disclaimer
 This is a reimplemented demo with focus on interactivity, and not the code that was used to generate the images and timings in the paper.
 
